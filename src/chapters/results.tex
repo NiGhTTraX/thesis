@@ -1,0 +1,121 @@
+\chapter{Performance analysis}
+\label{chapter:results}
+
+\newcommand{\vectype}{\mbox{\_\_vectype\_\_}}
+\newcommand{\vpack}{\mbox{\_\_builtin\_vpack}}
+\newcommand{\vunpack}{\mbox{\_\_builtin\_vunpack}}
+
+OpenCL is a tool meant to make parallelism easier for programmers to express, and in a way that can be mapped efficiently unto very different hardware systems. As a result, there are perhaps 2 major categories of factors that must be taken into account when evaluating OpenCL: 
+\begin{itemize}
+\item ease of use - this category comprises several rather subjective factors such as how difficult it is to write and maintain OpenCL code, how steep the learning curve is etc.
+\item performance - how much overhead is introduced by using OpenCL (both in compilation time and running time), whether or not the performance gains outweigh this overhead etc.
+\end{itemize}
+
+The first category does not depend on a particular implementation, but on the OpenCL specification. Therefore, there is little to be said about it here.
+
+As far as performance goes, the first instinct is to look for benchmarks. However, they are of no use for this project. For one thing, OpenCL benchmarks are mostly written for GPUs, and would have little relevance for a DSP. Secondly, and perhaps more importantly, they would evaluate not only the OpenCL implementation, but also the architecture (since there is no other OpenCL implementation for this device, or even for a similar DSP).
+
+Therefore, in order to test the implementation, it is necessary to provide custom tests. Since the runtime is a stub, only the compiler will be evaluated. %Firstly, some of the choices made during the design of the C++ IR will be explained, and then the overall performance of the compiler will be discussed.
+
+%\section{C++ IR design choices}
+%\todo{discuss lib size (as promised in the previous chapter) < or remove this subsection}
+
+\section{OclCompiler performance}
+The performance of a compiler is usually tested by measuring the quality of its output - that is, the running time, memory footprint or some other metric, of the obtained executable. The ultimate goal is to come as close as possible to the ideal low-level version, as it would have been written by a programmer without using the high-level language of the compiler. In this case, the high-level language is OpenCL C, whereas the low-level one is C/C++.
+
+In order to perform this comparison, the code in Listing \ref{lst:test} was used. This code is intentionally simple, in order to focus on a DSP-specific operation: MAC (described in Section \ref{section:dsp}). 
+
+\begin{lstlisting}[label=lst:test, caption=Simple test function]
+void weighted_add(const data_t *x, const data_t *y, data_t w, data_t *r, int n)
+{
+#pragma noinline
+	int i;
+	for (i = 0; i < n; i++)
+		r[i] = x[i] * w + y[i];
+}
+\end{lstlisting}
+
+With this simple function and some nifty typedefs, it is possible to produce several interesting results. First of all, by replacing data\_t with standard C data types, such as int or float, we obtain our reference version, that a programmer would write if he were not using OpenCL. 
+
+The OpenCL version is obtained by defining data\_t as an OpenCL vector type, such as int4 or float8\footnote{Naturally, the reference version will only pass through the StarCore compiler, whereas the OpenCL version will pass through the OclCompiler and will be linked with OclLib.}.
+
+Another version of interest is obtained by replacing data\_t with \vectype{}, which is a data type specific to the scc. This data type, and some of the common operations that can be performed with it, are illustrated in Listing \ref{lst:vectype}.
+
+\begin{lstlisting}[label=lst:vectype, caption=The \vectype{} data type]
+Word32 x = 3, y = 7; // data type equivalent to OpenCL int
+
+__vectype__<Word32, 4> a = __builtin_vpack(1, x, x, y);
+__vectype__<Word32, 4> b = __builtin_vpack(y, x, x, 1);
+
+__vectype__<Word32, 4> sum = a + b;
+__vectype__<Word32, 4> product = a * b;
+
+Word32 s0, s1, s2, s3;
+__builtin_vunpack(sum, s0, s1, s2, s3);
+\end{lstlisting}
+
+The \vectype{} data type is an experimental feature of the scc, meant to take advantage of the SIMD capabilities of the StarCore DSP. It is undocumented and not fully supported by the scc front end, however it can provide a great performance boost, as can be seen by using it as data\_t in our test example. It is also interesting to use as an internal storage for the C++ IR, instead of the C-style array. 
+
+To summarize, there are 4 versions of the weighted\_add function that will be tested:
+\begin{itemize}
+\item The reference version, with data\_t represented by standard C data types (int etc.)
+\item The \vectype{} version, with data\_t represented by \vectype{}
+\item Two OpenCL versions, with data\_t represented by OpenCL vectors - the difference will lie in the internal representation of the vectors from the C++ IR:
+\begin{itemize}
+\item one version will use a C-style array
+\item the other version will use \vectype{}\footnote{Obviously, the implementation of the operators will change too.}
+\end{itemize}
+\end{itemize}
+
+The tests were run on arrays with different base types: int, short and float. The total number of elements in the array was 16000 (in the case of the vectorized versions, there were 4000 x 4 elements)\footnote{The tests were run on the StarCore performance-accurate simulator, which isn't very fast. Therefore, it would have taken a lot of time to run larger tests.}. The results of the simulations can be seen in Table \ref{table:cycles}\footnote{Some results could not be obtained due to limitations in the scc.}.
+
+\begin{table}[htb]
+	\centering
+  \caption{Cycle counts}
+  \label{table:cycles}
+  \begin{tabular}{|l|*{6}{c|}}
+  	\hline
+    \textbf{Optimization level}			& \multicolumn{3}{|c|}{O3} 		& \multicolumn{3}{|c|}{O0}		\\[2ex]
+    \hline
+    \textbf{Base type}							& int			& short		& float		& int			& short		& float		\\[2ex]
+    \hline
+    Reference version 							& 64009		& 64009		& 128009	& 560035	& 560035	& 608036	\\
+    \hline
+    \vectype{} version			 				& 20025		& 				& 32024		& 172081	&					& 168082	\\
+    \hline
+    OpenCL version (C-style array)	& 144031	& 180014	& 296053	& 2888078	& 1788062	& 1968059	\\
+    \hline
+    OpenCL version (\vectype{})		 	& 80028		& 128016	& 92029		& 552063	& 524047	& 				\\
+    \hline
+  \end{tabular}
+\end{table}
+
+The first thing that stands out is the rather poor performance of the OpenCL versions. The first one, using a C-style array as internal storage, performs 2-5 times slower than the reference version. This is due to the overhead introduced by the use of C++ templates. This overhead is also visible in the second OpenCL version - the one using \vectype{} as internal storage. However, due to the fact that scc can easily optimize uses of \vectype{}, this version comes close and in some cases even outperforms the reference version. This shows that perhaps the current C++ IR, coupled with \vectype{}, might be a reasonable starting point for a decent OpenCL compiler\footnote{That would require quite a bit of optimization work though...}. 
+
+But the most remarkable conclusion that can be drawn from the results in Table \ref{table:cycles} is that the reference version can be outperformed. By dropping the template abstraction and generating C++ code based on \vectype{} directly, there is a great performance gain (the \vectype{} version runs 3-4 times faster than the reference version). What this means is that it is possible to create an OpenCL compiler that would allow the users to take full advantage of the SIMD capabilities of the StarCore DSP, in a way that is currently not exposed to them\footnote{Except by means of intrinsics, but those are only available under a Non Disclosure Agreement.}.
+
+Another advantage of using OpenCL is that it provides innate loop unrolling: by grouping data into OpenCL vectors, the number of iterations in a loop decreases, and with it the number of jumps that must be made (this is excellent news for the prefetch unit). Furthermore, it increases the number of instructions in a single iteration of the loop, thus allowing efficient use of all the ALUs of the StarCore DSP. Although this increases the size of the executable, it provides a great performance boost, as can be seen in Table \ref{table:unrolling}. 
+
+\begin{table}[htb]
+	\centering
+  \caption{Benefits of loop unrolling (cycle counts)}
+  \label{table:unrolling}
+  \begin{tabular}{|*{4}{c|}}
+  	\hline
+    bla	& int			& short		& float		\\[2ex]
+    \hline
+    1 (Reference version) 							& 64009		& 64009		& 128009	\\
+    \hline
+    4														 				& 20025		& 				& 32024		\\
+    \hline
+    8																		& 12026		& 8016		& 16024		\\
+    \hline
+    16																 	& 8059		& 4016		& 8058		\\
+    \hline
+  \end{tabular}
+\end{table}
+
+There are however some limitations that must be taken into account: most importantly, as \vectype{} is only an experimental feature, support for it in the scc front end is narrow. For instance, \vectype{} components can only be accessed by means of the built-ins \vpack{}  and \vunpack{}\footnote{These built-ins do not act as functions, but rather as macros.}, therefore a read operation on the vector's components would require a \vunpack{}, whereas a write on specific components would require both a \vunpack{}  and a \vpack{}. Also, the scc front end only accepts certain operators between \vectype{} variables (such as +, -, *). OpenCL, on the other hand, allows a great variety of operators between its vectors. In order to implement these, it would be necessary to perform unpacking and packing of \vectype{} variables, which would naturally have an impact on performance.
+
+With or without these limitations, it is clear that there is some potential that is not fully harvested by the standard C programming model. Perhaps the simplest way to fix this would be to tie the Clang front end to the StarCore compiler's back end, which would have the additional benefit of reducing compilation time. 
+\todo{maybe more blah here? - definitely more blah here, about translating the clang ast to the scc ast}

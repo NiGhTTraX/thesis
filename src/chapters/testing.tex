@@ -1,0 +1,39 @@
+\chapter{Testing and validation}
+
+\section{Unittets}
+An exhaustive test suite has been written for Eos and Raven that loads various fittings and tests that the engine is correctly calculating restrictions and attributes. This suite is ever growing so these engines will become more accurate as time passes. The results are taken from observations made ingame and are then compared to the output of Eos and Raven.
+
+\section{Database performance}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline Event & MySQL & SQLite \\ 
+\hline Page load & 1.5s & 1.3s \\ 
+\hline Get fits (Naga) & 35ms & 25ms \\ 
+\hline Get items (Civilian modules) & 40ms & 40ms \\ 
+\hline Search items (\%drone\%) & 160ms & 440ms \\ 
+\hline Search fits (\%naga\%) & 50ms & 180ms \\ 
+\hline Create fit (Naga) & 30ms & 180ms \\ 
+\hline 
+\end{tabular} 
+\end{table}
+
+As we can see, sqlite3 is faster than MySQL at fetching data. However, it performs horribly when doing LIKE queries with preceding wildcards. Also, sqlite3 performance degrades when Django is set to save the session on every request, thus negatively impacting every AJAX request.
+
+\section{Tengu performance}
+To increase the loading times for Tengu, we used django-compressor \cite{compressor} which gathers all script files and stylesheets, concatenates them into a single file and minifies it. Thus, not only do we save on bandwidth, but on number of requests as well.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline Metric & Original & Compressed \\ 
+\hline Load time & 1.55s & 1.45s \\ 
+\hline Bandwidth & 1.1MB & 547KB \\ 
+\hline Number of requests & 45 & 27 \\ 
+\hline Javascript files size & 334KB & 325KB \\ 
+\hline CSS files size & 15.5KB & 13.5KB \\ 
+\hline 
+\end{tabular}
+\end{table}
+
+As you can see, compressing Tengu improved the bandwidth that was consumed on every page load and the number of requests being issued by the browser to fetch all the necessary files. The load time is limited by the image server provided by CCP, from which the browser has to download the items and ship icons.

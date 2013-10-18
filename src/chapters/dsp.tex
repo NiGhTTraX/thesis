@@ -1,0 +1,28 @@
+\chapter{Digital signal processors. The StarCore DSP}
+
+\section{Digital signal processors}
+\label{section:dsp}
+Digital signal processors are, as the name suggests, designed for a very specific task: the manipulation of signals represented as a discrete stream of values. This is useful in many fields, such as telecommunications, medical imagery, defence (radar, unmanned vehicles) and so forth\cite{dspguide}.
+
+In order to accomplish this task efficiently, DSPs provide some facilities that are not very common in other devices. For example, many DSPs provide a fast multiply-accumulate (MAC) instruction, which is crucial for the performance of several wide-spread signal processing algorithms, such as FIR\footnote{Finite Impulse Response} filters and FFT\footnote{Fast Fourier Transform}. This instruction is so important, that often DSP performance is expressed in GMACS (giga-MAC per second). Other common features are hardware modulo addressing, which allows the existence of fast and easy to use circular buffers; support for fixed point arithmetic (which is much faster than floating point and precise enough for many applications); support for complex numbers(common in DSP applications), and so on.
+
+However, the amount of data that needs to be processed is always growing, especially in the field of telecommunications, where smartphones are expected to support more and more traffic. It is now common knowledge that increasing the clock frequency is not an attractive solution because of the power wall\cite{powerwall}, so in order to achieve an increase in processing speed it is necessary to use parallelism.
+
+As a result, DSPs nowadays contain several processing units, and often provide support for SIMD execution, VLIW\footnote{Very Long Instruction Word}, instruction pipelining and so on. This makes them good candidates for OpenCL implementations.
+
+
+\section{The StarCore processor}
+The StarCore architecture showcases the main features of DSPs: it has a specialised instruction set, several independent arithmetic logic units (ALU) and address generation units (AGU), a good memory bandwidth etc.
+
+For example, the latest StarCore processor, the SC3900, running at 1.2GHz, is capable of 38.4GMACS and has a 1.2Tb memory bandwidth, 4 independent ALUs, each capable of executing 2 multiply instructions in a single cycle, and 2 independent AGUs\cite{sc3900}. In order to introduce even more parallelism, Freescale offers a whole line of SoC boards which contain 1, 2, 4 or 6 such cores, as well as various other hardware units. Figures \ref{img:B4860}\footnote{Source: \url{http://www.freescale.com/webapp/sps/site/prod\_summary.jsp?code=B4860}} and \ref{img:B4420}\footnote{Source: \url{http://www.freescale.com/webapp/sps/site/prod\_summary.jsp?code=B4420}} show 2 such SoCs - the B4860 and the B4420, designed for baseband processing. These contain different numbers of StarCore units, Power Architecture cores, MAPLE accelerators and so on.
+\fig[scale=0.65]{src/img/B4860.jpg}{img:B4860}{The B4860 SoC block diagram.}
+\fig[scale=0.65]{src/img/B4860.jpg}{img:B4420}{The B4420 SoC block diagram.}
+
+For these boards, there are several different ways to map the OpenCL model: 
+\begin{itemize}
+\item the device could be the whole board, with an external host
+\item the board could be represented as several separate devices, with an external host (either each core is a device on its own, or there is one device with several compute units for each kind of core)
+\item the host could be one of the processors based on the Power Architecture (which usually run a Linux system), whereas the device could consist of the StarCore clusters (either with each cluster representing a compute unit with 2 processing elements, or with each core representing a compute unit on its own, or any other combination)
+\item as above, but with the addition of the other Power Architecture cores as compute units of the device
+\end{itemize}
+The suitability of these mappings is of no concern to the current project, however it would be a crucial factor in a real life implementation of OpenCL.

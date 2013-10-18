@@ -1,0 +1,44 @@
+\chapter{Runtime implementation}
+\label{chapter:runtime}
+
+The runtime was developed for an x86 host and the StarCore SC3900 simulator acting as a device. This setup provides certain limitations, especially with regard to the communication between the host and the device. It provides only the most essential functionality:
+\begin{itemize}
+\item building kernels
+\item setting arguments for kernels
+\item running kernels
+\item reading back the results of the kernel execution
+\end{itemize}
+
+\section{Kernel compilation}
+The runtime starts the compiler as a separate process and waits for it to finish. An obvious improvement would be to integrate the compiler as a library into the host program, which would save not only the overhead of starting a new process, but also that of passing its results through the file system.
+
+\section{Setting kernel arguments}
+The kernel arguments are dumped into files, along with their size. Before executing the kernel, the device will have to fetch them from the file system. Naturally, in a real life DSP scenario, the data would be passed to the processor through more efficient means, such as the RAM memory, Ethernet or maybe even CPRI\footnote{Common Public Radio Interface} in the case of an external host. 
+
+When copying arguments between the host and the device, special care must be taken in the handling of endianness. The StarCore architecture supports both big endian and little endian, however the physical devices usually offer support only for big endian. On the other hand, x86 is little endian. The OpenCL specification leaves the issue of endianness in the care of the developer, who can either change the byte ordering of the data before copying it to the device's memory, or use the endian attribute to specify whether a certain variable uses the byte ordering of the host or that of the device\footnote{Simple usage example: int8 *stream \_\_attribute\_\_((endian(host)));}.
+
+\section{Kernel execution}
+When submitting a kernel for execution, the runtime generates a source file containing the main function of the program that will be run on the device. This file contains code for reading the kernel arguments from the file system, calling the kernel (which is declared as an external symbol) and writing the modified arguments back to their respective files. Since kernels always return void, that is the only thing that needs to be done in order to be able to retrieve the results of the computation.
+
+This file is further linked together with the one containing the C++ version of the kernel, and then the simulator is invoked. For simplicity, the runtime waits for the simulator to finish execution. As a result, out of order execution of kernels is not possible, and synchronization commands are redundant.
+
+\section{Getting the results}
+Retrieving the results is as simple as reading the corresponding files from the disk.
+
+\vspace*{2\baselineskip}
+***
+
+\vspace*{1\baselineskip}
+Aside from the efficiency issues, which are obvious, there is another, more interesting problem to be discussed: that of OpenCL NDRanges. As described in Section \ref{section:runtime}, an NDRange consists of one or more work-items organized into one or more work-groups. The work-items run independently and have access to private sections of memory, as well as shared sections of memory (either shared between all work-items, or only between those in the same work-group). However, the StarCore architecture offers no support for threading - it can only run one task at a time. Therefore, there is no performance gain in running more work-items than the number of StarCore DSP cores available on a given platform\footnote{This is true because the kernels are computation-oriented, and also because there is no scheduler available that could switch between work-items in order to provide better performance.}.
+
+The OpenCL standard offers the implementers the possibility to limit the size of the NDRange that can be enqueued by the user (by returning CL\_INVALID\_WORK\_GROUP\_SIZE or CL\_INVALID\_WORK\_ITEM\_SIZE from clEnqueueNDRangeKernel). However, doing this would limit code portability, unless the given code is very carefully written (i.e., it queries for device properties before sending the kernel to a command queue). 
+
+In order to avoid this limitation, it is possible to simulate the work-items by running the kernel repeatedly, with different values for the work-item id. However, there is another issue to be considered: the kernel may contain barriers or memory fences, used to synchronize within the current work-group. This is problematic, because it requires that the current work-item be suspended and replaced with another one, without losing its current state.
+
+A simple way to handle this problem is by using SmartDSP OS (SDOS)\cite{sdos}. This is a real-time operating system provided by Freescale for its DSPs. It offers an abstraction for tasks that may be used to implement and easily manipulate work-items. In short, it is possible to suspend or activate any task, at any moment. Furthermore, the tasks are scheduled using a simple round-robin algorithm, with no preemption - this makes the execution order of tasks entirely predictable\footnote{This is true as long as no tasks are activated or suspended in interrupt handlers.}. 
+
+With SDOS, OpenCL work-items can be implemented as tasks. This makes the implementation of the barrier function very simple as long as a work-group is assigned to a single core (otherwise, inter-core synchronization is necessary, and that introduces additional overhead).
+
+Another benefit of using SDOS is that it may be used to provide support for the OpenCL memory hierarchy. This is because the Memory Management Units on Freescale boards often provide support for task-specific regions (which could constitute the OpenCL private memory), regions shared between certain tasks (OpenCL local memory) or regions visible to all tasks (OpenCL global memory). However, the implementation of these address spaces is left for future work.
+
+

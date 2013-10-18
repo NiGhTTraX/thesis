@@ -1,0 +1,48 @@
+\chapter{Introduction}
+\label{chapter:intro}
+
+EVE Online \cite{eve} is a Massively Multiplayer Online \cite{mmo} game with Role Playing Game \cite{rpg} elements, developed by CCP Games \cite{ccp} and published in 2003. Set in a futuristic environment, it has a player base of over 500,000 active players and a vast community of 3rd party developers. Certain tools have been developed that make the life of players easier by letting them monitor their characters \cite{evemon}, simulate fittings offline \cite{pyfa} and study the market \cite{evecentral}.
+
+\section{Objective}
+Our main objective is to build an online framework for EVE Online that allows players to observe and analyze the interactions between entities within it. These entities consist of ships and the modules you can fit on them. Different modules affect the ship in different ways and each has a well suited purpose. Finding out the right combination of modules can be both time and resource consuming as you can only fit your ship with items that you own.
+
+Every item in the EVE Online universe is stored in a table in the game’s database. CCP provides these tables as part of their community toolkit \cite{sde}, but does not provide documentation for them. Thus, these tables need to be first analyzed to extract useful information. With about half a million rows, some of these taking part in relations involving up to 5 foreign keys, and tables with in excess of 20 columns, this will not be an easy task.
+
+Moreover, the effects of modules are specified using a language called Dogma which uses an expression tree to describe how the module works and how it affects the ship and even other modules. Like the tables, Dogma is undocumented.
+
+After a proper research phase, we will start building an engine that parses the database and can then simulate a ship fitting (the ship and the modules fitted on it). This engine needs to be highly scalable and efficient as it will be used to power an online framework that will host thousands of simultaneous connections. Not only that, but the layers of abstraction need to support EVE Online’s development cycle which states that, every 6 months, a new expansion is released, which brings new modules and updates existing ones.
+
+On top of that engine, we will build a high-level wrapper that will be closer to the mechanics of EVE Online. It will provide methods for querying the most important attributes of a fit and act as a middle layer between Dogma and a GUI. While still providing access to the raw engine, it will augment it with higher-level logic, whilst not slowing it down in any way.
+
+After all of this is done, an online framework is to be designed that will be feature rich, fast, scalable and sleek. It will provide cross-browser means for creating and sharing fits using a user-friendly interface capable of supporting thousands of simultaneous users 24/7. While, currently, there is no way to push data into the game, CCP provides some Javascript hooks in their ingame web browser that developers can use, along with a special data format, to allow users to save fits. The online framework needs to be compatible with the ingame browser and allow exporting fits to that special format.
+
+Most importantly, this platform needs to provide a fast and easy update process, which will consist of getting the newest version of the database, feeding it to the engine and redeploying the online framework.
+
+\section{Motivation}
+As an EVE player you are presented with a harsh environment where your mistakes can have dire consequences. Losing your ship in combat means losing time and money. As a result, one must plan ahead before entering combat. Finding a suitable fitting for your ship can make the difference between walking away victoriously, or losing considerable amounts of resources.
+
+Thus, EVE players need an environment where they can safely experiment with different fittings and scenarios so that they can find the optimal setups for their ships. Since you can only fit your ship with items that you own, having an environment where you can do so without spending resources may prove to be invaluable.
+
+With a community of over half a million players, this project will make a huge impact not only among the players, but among 3rd party developers alike that can build upon it and improve their services.
+
+\section{Impact}
+As fitting ships is at the core of the game, a tool that allows easy and risk free creation of fittings is necessary. We foresee that a vast majority of EVE players will use our framework, directly or indirectly. 
+
+Currently, alliances and corporations need to maintain a wiki for all their common fleet doctrines in text only format that players need to constantly check and import in any offline tool they have available. We believe that moving the process of managing fits online will make it easier for everyone to remain updated.
+
+Alliances can range from tens of players to even thousands, while coalitions can even consist of tens of thousands of players. All these players need quick and easy access to the repertoire of fittings, and what better way to do it than through a central service that is both easy to manage and highly secure. Fits can be made public for anyone to see, or they can be restricted to the players of the alliance or corporation the owner is part of. Thus, opposing alliances will not have access to each other’s fittings. Nowadays, this is achieved by using authentication on the wikis and sharing the passwords amongst the alliance, which can be very easily exploited.
+
+Moreover, there are certain services, like Battleclinic \cite{bc}, and killboards, such as eve-kill \cite{evekill} and zKillboard \cite{zkb}, who require ways of rendering fits, that will greatly benefit from this project. We plan to release an open API \footnote{Application Programming Interface} that anyone can use to retrieve public fits and embed them on their websites. The API will not only provide renders of the fits, but also statistics calculated with our engine. Currently, these services only provide a visual representation of the fitting, leaving the statistics part in the hands of the players which have to paste them in text-only format from their own tools. This is not only cumbersome, but prone to errors as different tools have different methods of calculating stats.
+
+In the end, our plan is to create a central source for everything related to EVE fittings, that anyone can use and that anyone can take advantage of in building their own projects. A highly scalable and flexible architecture is the key in achieving this, while an easy to use interface will keep users coming back.
+
+\section{EVE Online}
+EVE Online is a player-driven, persistent-world MMORPG set in a single shard science fiction universe. Players pilot customizable ships through a galaxy of over 7,500 star systems connected by means of stargates. Character advancement is done through training skills \cite{skills} in real-time.
+
+While EVE shares many aspects with most of the current MMO games, it differs radically through its player driven market. Every item in the game is manufactured by the players themselves through the use of blueprints \cite{bpo}.
+
+Another important difference is that once a player is killed in combat, his or her ship, along with the modules fitted on it, are lost. This makes EVE considerably more difficult than other games in the genre as death can have extreme consequences for players. Items must be restocked after every combat loss and, in special cases \cite{poddeath}, a player can even lose skill points, thus having to retrain the lost skill.
+
+EVE Online is hosted on a single massive server called Tranquility (or simply, TQ). At the time of writing, the London based server sports 4TB of RAM, 2.5 THz of CPU power and military grade equipment.
+
+In February 2013, EVE Online reached over 500,000 subscribers \cite{500k}, making it the single video game in history to have a steady growth of the player base over the course of 10 years. CCP already has a road plan for the next decade, so this is a game that’s here to stay and that will continue to evolve, along with its player base.

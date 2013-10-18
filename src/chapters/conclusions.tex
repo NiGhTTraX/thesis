@@ -1,0 +1,37 @@
+\chapter{Conclusions}
+\label{chapter:conclusions}
+
+We set out to design a complete online framework for building fits for EVE Online. We achieved much more than that.
+
+Eos and Raven are two powerful and accurate engines that provide simple, yet powerful APIs that anyone can use to build their own fitting simulators and not be tied to a particular GUI. Also, the documentation we wrote for these engines can help other developers write engines in other languages, or to suit their own needs.
+
+Tengu provides a sleek interface that allows users to create, view and modify fittings using any available item in the game, while providing an unparalleled user experience. Not only that, but, due to its many abstraction layers, it’s very easily to update when a new EVE expansion is released.
+
+We foresee that many 3rd party services will use the Tengu API to fetch and display fittings using our fitting wheel template. Our future plans include writing a little Javascript library that wraps our API and allows developers to easily embed fittings into their websites.
+
+\section{Future work}
+\subsubsection{Detailed view}
+While the wheel view for fits should be more than enough for anyone trying to lookup a certain fit, there are certain details that cannot be shown there. Things like optimal range and falloff for guns, tracking speed for turrets and drone range should be presented using a more detailed, list based view. This new view should provide theorycrafters with the information they need to concoct the perfect fits. The wheel view will be the default one, users being able to switch to the list view by a small icon in the top right corner.
+
+\subsubsection{Internationalization}
+EVE Online hosts players from all corners of the globe. As such, Tengu must be properly localized. Django provides an i18n\footnote{Internationalization} framework that gives you the ability to specify translation strings and provides methods to get the proper translation according to the user’s locale.
+
+Initially, Tengu will be launched in English. After that, we will seek out help to translate it in Russian, German, French, Japanese and Chinese, the most popular languages among EVE players.
+
+\subsubsection{Themes}
+We plan to create more visual themes that will suit any player looking to spruce up his or her fitting environment. Currently, a light theme is in the works to complement the default dark one.
+
+\subsubsection{CREST API}
+The developers of EVE Online announced a new API called CREST that will provide means of writing back to the Tranquility cluster. Using this new API, Tengu would be able to directly interact with the fittings stored on the TQ server on behalf of the user.
+
+\subsubsection{Notifications}
+Future work could involve adding notifications for when a player from your alliance or corporation adds a new fitting or edits an existing one. This would help players remain updated with the fleet doctrines and never end up in the situation where they would field the wrong setup.
+
+\subsubsection{Importing and exporting fits}
+As there are multiple offline solutions for fitting ships out there, we plan to support importing fits in various formats, as well as exporting them.
+
+\subsubsection{Creating fits through the API}
+Killboards are centered around fittings and, as such, we plan to provide them with an API that will allow them to use our fitting engine and HTML renderer to create fits on the fly. These fits will be stored under a user created specifically for that respective killboard and will be set to private, so only the killboard can fetch them.
+
+\subsubsection{Porting Raven to Javascript}
+A Javascript implementation of Raven, along with Eos, would allow client-side fitting simulations, thus offloading the workload from the server to the user’s browser.
